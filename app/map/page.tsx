@@ -36,14 +36,17 @@ export default function MapPage() {
   const [minScore, setMinScore] = useState<number>(0);
   const [dateRange, setDateRange] = useState<'7' | '30' | 'all'>('all');
 
-  const initializeMap = () => {
-    if (!mapContainer.current) return;
+  const initializeMap = useCallback(() => {
+    if (!mapContainer.current || map.current) return;
 
     try {
+      console.log('Initializing map with token:', MAPBOX_TOKEN ? 'Token present' : 'No token');
+      
       // Check if we have a valid Mapbox token
       const hasValidToken = MAPBOX_TOKEN && MAPBOX_TOKEN.startsWith('pk.');
       
       if (hasValidToken) {
+        console.log('Using Mapbox style');
         // Use Mapbox style
         map.current = new mapboxgl.Map({
           container: mapContainer.current,
@@ -52,6 +55,7 @@ export default function MapPage() {
           zoom: 3,
         });
       } else {
+        console.log('Using OpenStreetMap fallback');
         // Fall back to OpenStreetMap
         map.current = new mapboxgl.Map({
           container: mapContainer.current,
@@ -85,7 +89,7 @@ export default function MapPage() {
       // Add error handler
       map.current.on('error', (e) => {
         console.error('Map error:', e);
-        setMapError('Map failed to load. Please check your Mapbox token.');
+        setMapError(`Map error: ${e.error?.message || 'Unknown error'}`);
       });
 
       // Add load handler
@@ -95,9 +99,9 @@ export default function MapPage() {
       });
     } catch (error) {
       console.error('Error initializing map:', error);
-      setMapError('Failed to initialize map. Please refresh the page.');
+      setMapError(`Failed to initialize map: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-  };
+  }, []);
 
   const fetchEvents = async () => {
     try {
@@ -205,10 +209,12 @@ export default function MapPage() {
   }, [user]);
 
   useEffect(() => {
+    console.log('Events loaded:', events.length, 'Map exists:', !!map.current, 'Container exists:', !!mapContainer.current);
     if (events.length > 0 && !map.current && mapContainer.current) {
+      console.log('Calling initializeMap');
       initializeMap();
     }
-  }, [events]);
+  }, [events, initializeMap]);
 
   useEffect(() => {
     applyFilters();
@@ -359,7 +365,18 @@ export default function MapPage() {
 
         {/* Map Container */}
         <div className="flex-1 relative">
-          <div ref={mapContainer} className="absolute inset-0" />
+          <div ref={mapContainer} className="absolute inset-0" style={{ width: '100%', height: '100%' }} />
+          
+          {/* Debug Info */}
+          <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm border border-gray-200 px-3 py-2 rounded-lg shadow-lg text-xs z-10">
+            <div className="space-y-1">
+              <div><span className="font-semibold">Token:</span> {MAPBOX_TOKEN ? (MAPBOX_TOKEN.startsWith('pk.') ? '✓ Valid (pk.)' : '✗ Invalid (sk. or other)') : '✗ Not set'}</div>
+              <div><span className="font-semibold">Events:</span> {events.length} total, {filteredEvents.length} visible</div>
+              <div><span className="font-semibold">Markers:</span> {markers.current.length} on map</div>
+              <div><span className="font-semibold">Map:</span> {map.current ? '✓ Initialized' : '✗ Not initialized'}</div>
+            </div>
+          </div>
+
           {mapError && (
             <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-lg max-w-md z-10">
               <div className="flex items-start space-x-2">

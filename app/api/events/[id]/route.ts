@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/middleware';
-import { getEventById, updateEvent, deleteEvent } from '@/lib/data/events';
+import { getEventById, updateEvent, deleteEvent, initializeEvents } from '@/lib/data/events';
 import { hasPermission } from '@/lib/auth';
+
+// Initialize events on first request
+initializeEvents();
 
 export async function GET(
   request: NextRequest,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
@@ -10,8 +10,11 @@ import Button from '@/components/ui/Button';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-// Use a public token for demo purposes
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
+// Set Mapbox access token if available
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+if (MAPBOX_TOKEN) {
+  mapboxgl.accessToken = MAPBOX_TOKEN;
+}
 
 export default function MapPage() {
   const { user, loading } = useAuth();
@@ -25,6 +28,7 @@ export default function MapPage() {
   const [selectedEvent, setSelectedEvent] = useState<InsightEvent | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingData, setLoadingData] = useState(true);
+  const [mapError, setMapError] = useState<string>('');
 
   // Filters
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
@@ -32,66 +36,67 @@ export default function MapPage() {
   const [minScore, setMinScore] = useState<number>(0);
   const [dateRange, setDateRange] = useState<'7' | '30' | 'all'>('all');
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
-
-  useEffect(() => {
-    if (user) {
-      fetchEvents();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (events.length > 0 && !map.current && mapContainer.current) {
-      // Initialize map without token (will use OpenStreetMap as fallback)
-      initializeMap();
-    }
-  }, [events]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [events, selectedCategories, selectedSeverities, minScore, dateRange, searchQuery]);
-
-  useEffect(() => {
-    if (map.current) {
-      updateMarkers();
-    }
-  }, [filteredEvents]);
-
   const initializeMap = () => {
     if (!mapContainer.current) return;
 
-    // Create a simple map centered on the US
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: {
-        version: 8,
-        sources: {
-          'osm-tiles': {
-            type: 'raster',
-            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            attribution: '© OpenStreetMap contributors',
+    try {
+      // Check if we have a valid Mapbox token
+      const hasValidToken = MAPBOX_TOKEN && MAPBOX_TOKEN.startsWith('pk.');
+      
+      if (hasValidToken) {
+        // Use Mapbox style
+        map.current = new mapboxgl.Map({
+          container: mapContainer.current,
+          style: 'mapbox://styles/mapbox/streets-v12',
+          center: [-98.5795, 39.8283],
+          zoom: 3,
+        });
+      } else {
+        // Fall back to OpenStreetMap
+        map.current = new mapboxgl.Map({
+          container: mapContainer.current,
+          style: {
+            version: 8,
+            sources: {
+              'osm-tiles': {
+                type: 'raster',
+                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                tileSize: 256,
+                attribution: '© OpenStreetMap contributors',
+              },
+            },
+            layers: [
+              {
+                id: 'osm-tiles',
+                type: 'raster',
+                source: 'osm-tiles',
+                minzoom: 0,
+                maxzoom: 19,
+              },
+            ],
           },
-        },
-        layers: [
-          {
-            id: 'osm-tiles',
-            type: 'raster',
-            source: 'osm-tiles',
-            minzoom: 0,
-            maxzoom: 19,
-          },
-        ],
-      },
-      center: [-98.5795, 39.8283],
-      zoom: 3,
-    });
+          center: [-98.5795, 39.8283],
+          zoom: 3,
+        });
+      }
 
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      
+      // Add error handler
+      map.current.on('error', (e) => {
+        console.error('Map error:', e);
+        setMapError('Map failed to load. Please check your Mapbox token.');
+      });
+
+      // Add load handler
+      map.current.on('load', () => {
+        console.log('Map loaded successfully');
+        setMapError('');
+      });
+    } catch (error) {
+      console.error('Error initializing map:', error);
+      setMapError('Failed to initialize map. Please refresh the page.');
+    }
   };
 
   const fetchEvents = async () => {
@@ -106,7 +111,7 @@ export default function MapPage() {
     }
   };
 
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let filtered = [...events];
 
     if (selectedCategories.length > 0) {
@@ -139,9 +144,9 @@ export default function MapPage() {
     }
 
     setFilteredEvents(filtered);
-  };
+  }, [events, selectedCategories, selectedSeverities, minScore, dateRange, searchQuery]);
 
-  const updateMarkers = () => {
+  const updateMarkers = useCallback(() => {
     if (!map.current) return;
 
     // Clear existing markers
@@ -185,7 +190,35 @@ export default function MapPage() {
 
       markers.current.push(marker);
     });
-  };
+  }, [filteredEvents]);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
+  useEffect(() => {
+    if (user) {
+      fetchEvents();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (events.length > 0 && !map.current && mapContainer.current) {
+      initializeMap();
+    }
+  }, [events]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
+
+  useEffect(() => {
+    if (map.current) {
+      updateMarkers();
+    }
+  }, [updateMarkers]);
 
   const toggleCategory = (category: Category) => {
     setSelectedCategories((prev) =>
@@ -327,6 +360,24 @@ export default function MapPage() {
         {/* Map Container */}
         <div className="flex-1 relative">
           <div ref={mapContainer} className="absolute inset-0" />
+          {mapError && (
+            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-lg max-w-md z-10">
+              <div className="flex items-start space-x-2">
+                <svg className="w-5 h-5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div>
+                  <p className="font-medium">Map Error</p>
+                  <p className="text-sm mt-1">{mapError}</p>
+                  {MAPBOX_TOKEN && MAPBOX_TOKEN.startsWith('sk.') && (
+                    <p className="text-sm mt-2 font-medium">
+                      Note: You&apos;re using a secret token (sk.). Please use a public token (pk.) for client-side maps.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Event Details Panel */}

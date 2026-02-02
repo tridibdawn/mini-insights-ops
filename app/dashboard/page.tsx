@@ -86,8 +86,6 @@ export default function DashboardPage() {
     Low: '#10b981',
   };
 
-  const canCreateEvent = user.role === 'admin' || user.role === 'analyst';
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />

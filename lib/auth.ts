@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { AuthUser, User, UserRole } from './types';
+import { AuthUser, UserRole } from './types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
@@ -24,7 +24,7 @@ export function verifyToken(token: string): AuthUser | null {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as AuthUser;
     return decoded;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

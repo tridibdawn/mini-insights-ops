@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState, use, useCallback } from 'react';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
@@ -16,19 +16,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const [loadingData, setLoadingData] = useState(true);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
-
-  useEffect(() => {
-    if (user && resolvedParams.id) {
-      fetchEvent();
-    }
-  }, [user, resolvedParams.id]);
-
-  const fetchEvent = async () => {
+  const fetchEvent = useCallback(async () => {
     try {
       const response = await fetch(`/api/events/${resolvedParams.id}`);
       if (response.ok) {
@@ -43,7 +31,19 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     } finally {
       setLoadingData(false);
     }
-  };
+  }, [resolvedParams.id, router]);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
+  useEffect(() => {
+    if (user && resolvedParams.id) {
+      fetchEvent();
+    }
+  }, [user, resolvedParams.id, fetchEvent]);
 
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this event?')) return;

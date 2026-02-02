@@ -34,6 +34,7 @@ export async function initializeUsers() {
 }
 
 export function getAllUsers(): Omit<User, 'password'>[] {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   return users.map(({ password, ...user }) => user);
 }
 

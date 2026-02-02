@@ -1,16 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/middleware';
 import { getAllEvents, getEventStats } from '@/lib/data/events';
 import { subDays, format, startOfDay } from 'date-fns';
 import { DashboardInsight } from '@/lib/types';
 
-export const GET = requireAuth(async (request: NextRequest) => {
+export const GET = requireAuth(async () => {
   const events = getAllEvents();
   const stats = getEventStats();
 
   // Calculate trend over time (last 14 days, grouped by day)
   const now = new Date();
-  const fourteenDaysAgo = subDays(now, 14);
   
   const trendData: { date: string; count: number }[] = [];
   for (let i = 13; i >= 0; i--) {

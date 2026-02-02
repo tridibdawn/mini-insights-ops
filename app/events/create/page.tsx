@@ -74,8 +74,8 @@ export default function CreateEventPage() {
         const data = await response.json();
         setError(data.error || 'Failed to create event');
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to create event');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create event');
     } finally {
       setSubmitting(false);
     }

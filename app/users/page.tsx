@@ -5,7 +5,6 @@ import { useAuth } from '@/lib/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import { UserRole } from '@/lib/types';
-import Button from '@/components/ui/Button';
 
 interface User {
   id: string;

@@ -214,7 +214,8 @@ export default function MapPage() {
       console.log('Calling initializeMap');
       initializeMap();
     }
-  }, [events, initializeMap]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events.length]);
 
   useEffect(() => {
     applyFilters();

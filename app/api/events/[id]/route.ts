@@ -3,9 +3,6 @@ import { getAuthUser } from '@/lib/middleware';
 import { getEventById, updateEvent, deleteEvent, initializeEvents } from '@/lib/data/events';
 import { hasPermission } from '@/lib/auth';
 
-// Initialize events on first request
-initializeEvents();
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -14,6 +11,9 @@ export async function GET(
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  // Initialize events before fetching
+  initializeEvents();
 
   const { id } = await params;
   const event = getEventById(id);
@@ -40,6 +40,9 @@ export async function PUT(
   if (!hasPermission(user.role, 'edit')) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
+
+  // Initialize events before updating
+  initializeEvents();
 
   try {
     const { id } = await params;
@@ -84,6 +87,9 @@ export async function DELETE(
   if (!hasPermission(user.role, 'delete')) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
+
+  // Initialize events before deleting
+  initializeEvents();
 
   const { id } = await params;
   const success = deleteEvent(id);

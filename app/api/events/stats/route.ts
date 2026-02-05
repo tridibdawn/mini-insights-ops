@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/middleware';
-import { getAllEvents, getEventStats } from '@/lib/data/events';
+import { getAllEvents, getEventStats, initializeEvents } from '@/lib/data/events';
 import { subDays, format, startOfDay } from 'date-fns';
 import { DashboardInsight } from '@/lib/types';
 
 export const GET = requireAuth(async () => {
+  // Initialize events before fetching stats
+  initializeEvents();
+  
   const events = getAllEvents();
   const stats = getEventStats();
 

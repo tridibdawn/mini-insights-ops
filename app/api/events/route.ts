@@ -7,12 +7,11 @@ import {
   initializeEvents,
 } from '@/lib/data/events';
 import { EventFilters, Category, Severity } from '@/lib/types';
-import { hasPermission } from '@/lib/auth';
-
-// Initialize events on first request
-initializeEvents();
 
 export const GET = requireAuth(async (request: NextRequest) => {
+  // Initialize events before fetching
+  initializeEvents();
+  
   const { searchParams } = new URL(request.url);
 
   const filters: EventFilters = {};

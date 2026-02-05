@@ -3,11 +3,11 @@ import { getUserByEmail, initializeUsers } from '@/lib/data/users';
 import { verifyPassword, generateToken } from '@/lib/auth';
 import { serialize } from 'cookie';
 
-// Initialize users on first request
-initializeUsers();
-
 export async function POST(request: NextRequest) {
   try {
+    // Initialize users before processing login
+    await initializeUsers();
+    
     const { email, password } = await request.json();
 
     if (!email || !password) {
